@@ -120,7 +120,7 @@ Furthermore, we observe that these three basis explained 90% of curve changes.
 It is predicted that there will be another rate hike in Dec 2017. Assume it has similar effect on the curve, that is, assume same factor loading on **Parallel shift**, **Slope shift** and **Curvature shift**.  Hence, we forecast that the curve will have a slight upward parallel shift, and become more flat and more concave.    
      
      
-To illustrate it with numbers, we have:  
+To illustrate with numbers, we have:  
 $\Delta x_1=0.035$    
     
 $\Delta x_2=-0.094$    
@@ -131,23 +131,32 @@ $\Delta x_3=0.131$
      
 ## Trading strategy    
 As we forecasted, the rate curve will move upward with a less tilted slope and a more concave curve.   
-
+    
+    
+Here are a table of treasury notes/bonds with their duration and prices.   
+    
+    
+    
 Treasury      | Modified Duration  | Price (Jun 2017) | Current Price 
 ------------- | ----------| -------------| -----------
 5-year  | 4.742 | \$118.74   | \$117.56
 10-year  | 8.771 |  \$126.45  | \$125.43
-30-year  | 20.064 | \$ 154.84| \$152.83  
+30-year  | 20.064 | \$ 154.84| \$152.83    
+     
 *Source: [WSJ.com](http://www.wsj.com/mdc/public/page/2_3022-bondmkt.html)*
 
-The strategy trades on  5-year notes, 10-year notes and 30-year bonds.
+The strategy trades on 5-year notes, 10-year notes and 30-year bonds.
 
 Let the weights be x1, x2, x3, or $\mathbf{x}=[x_1,x_2,x_3]^T$    
      
+     
+Because there is a potential upward parallel shift, it is optimal to keep a negative duration of the portfolio.
 At the beginning, weights should satistify following equations:   
 $$x_1D_1P_1+x_2D_2P_2+x_3D_3P_3 \leq 0$$   
 $$x_1P_1+x_2P_2+x_3P_3=0$$   
      
 $$x_2<0$$   
+    
 To solve the equations, assume $x_2=-1$.  
     
 $$
@@ -177,17 +186,21 @@ w <- c(x[1],-1,x[2])
 print("One possible solution of weights")
 print(w)
 ```
-
+     
+     
+### Backtest
+1. On June 2017, long 1.7742753 shares of 5-year notes future and short 1 share of 30-year bonds and 0.5439644 shares of 10-year notes. Initial cost = 0.  
+2. On Oct 2017, close out positions. Gain = $0.0197236    
 ```{r, echo=FALSE}
 Pn <- c(117.56,125.43,152.83)
+print('Initial cost')
 sum(w*P0)
+print('Ending value')
 sum(w*Pn)
 ```
 
 
-### Backtest
-1. On June 2017, long 5-year notes and 30-year bonds and short 10-year notes. Cost = 0.  
-2. On Oct 2017, close out positions. Gain = $0.0197236    
+
 
 
 
