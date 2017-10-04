@@ -4,9 +4,13 @@ author: "Yang Hu"
 date: "10/3/2017"
 output: pdf_document
 ---
-
+## Summary   
+This is a trading strategy based on US Treasury yield curve changes. It forecasts future yield changes caused by rates hike events.  
 
 ## US Fed Rates Hike History   
+     
+From 2015, the Fed has had 4 rates hikes, raising the fed fund rate to 1-1.25% now. Here are a table of US Fed rates hike history.   
+     
      
 Date          | Fed Fund Rate
 ------------- | -------------
@@ -57,7 +61,16 @@ We can break down the curve change into three categories: **Parallel shift**, **
 $\Delta \vec{C} \approx \Delta x_1\vec{P_1} +\Delta x_2\vec{P_2} +\Delta x_3\vec{P_3}$   
 $\Delta \vec{C}$ stands for curve change denoted by a vector.    
     
-We can easily use a set of orthogonal basis -- polynomials.  
+We can easily use a set of orthogonal basis -- polynomials (1,x,$x^2$).    
+    
+$\vec{V_1}=[1,1,1,1,1,1,1]^T$  
+    
+$\vec{V_2}=[1,2,3,4,5,6,7]^T$   
+   
+$\vec{V_3}=[1^2,2^2,3^2,4^2,5^2,6^2,7^2]^T$   
+    
+After standardizing vectors, we got unit basis.    
+
      
 ### 3 orthogonal basis
 ```{r, echo=FALSE, message=FALSE}
@@ -77,6 +90,7 @@ ggplot(Basis, mapping = aes(x = T) ) +
 
 ## basis
 ```
+ 
      
 With the tool of orthogonal basis, we can nail down what effect the rate hike had on the curve structure and forecast next curve change.     
       
@@ -93,10 +107,8 @@ temp <- c('Mar 17','Jun 17','Oct 17')
 ret <- cbind(temp,as.data.frame(cbind(dx1,dx2,dx3)))
 print(ret)
 ```
-      
-Take the curve change on Mar 17 as an example:  
-
-
+     
+     
 Here are what we observed:   
 1.  Rate hikes caused an upward parallel shift. However, marginal effects on parallel shifts are decreasing.  
 2.  Rate hikes made the curve less tilted.  
@@ -105,24 +117,78 @@ Here are what we observed:
 Furthermore, we observe that these three basis explained 90% of curve changes.   
 
 ## Forecast curve change on Dec 2017   
-It is predicted that there will be another rate hike in Dec 2017. Assume it has similar effect on the curve, that is, assume same factor loading on **Parallel shift**, **Slope shift** and **Curvature shift**.  Hence, we forecast that the curve will have a slight upward parallel shift, and become less tiled and become more concave.    
+It is predicted that there will be another rate hike in Dec 2017. Assume it has similar effect on the curve, that is, assume same factor loading on **Parallel shift**, **Slope shift** and **Curvature shift**.  Hence, we forecast that the curve will have a slight upward parallel shift, and become more flat and more concave.    
      
      
 To illustrate it with numbers, we have:  
-$\Delta x_1=$    
+$\Delta x_1=0.035$    
     
-$\Delta x_2=$    
+$\Delta x_2=-0.094$    
     
-$\Delta x_3=0.13$
+$\Delta x_3=0.131$
      
      
      
 ## Trading strategy    
 As we forecasted, the rate curve will move upward with a less tilted slope and a more concave curve.   
 
+Treasury      | Modified Duration  | Price (Jun 2017) | Current Price 
+------------- | ----------| -------------| -----------
+5-year  | 4.742 | \$118.74   | \$117.56
+10-year  | 8.771 |  \$126.45  | \$125.43
+30-year  | 20.064 | \$ 154.84| \$152.83  
+*Source: [WSJ.com](http://www.wsj.com/mdc/public/page/2_3022-bondmkt.html)*
 
+The strategy trades on  5-year notes, 10-year notes and 30-year bonds.
 
-
+Let the weights be x1, x2, x3, or $\mathbf{x}=[x_1,x_2,x_3]^T$    
      
+At the beginning, weights should satistify following equations:   
+$$x_1D_1P_1+x_2D_2P_2+x_3D_3P_3 \leq 0$$   
+$$x_1P_1+x_2P_2+x_3P_3=0$$   
+     
+$$x_2<0$$   
+To solve the equations, assume $x_2=-1$.  
+    
+$$
+\left[\begin{array}
+{rrr}
+x_1 \\
+x_3
+\end{array}\right]=
+\left[\begin{array}
+{rrr}
+D_1P_1 & D_2P_2 \\
+P_1 & P_2 
+\end{array}\right]^{-1}
+\left[\begin{array}
+{rrr}
+D_2P_2 \\
+P_2
+\end{array}\right]
+$$
+```{r, echo=FALSE}
+D <- c(4.742,8.771,20.064)
+P0 <- c(118.74,126.45,154.84)
+A <- rbind(D[-2]*P0[-2],P0[-2])
+b <- c(D[2]*P0[2]-1800,P0[2])
+x <- solve(A)%*%b
+w <- c(x[1],-1,x[2])
+print("One possible solution of weights")
+print(w)
+```
+
+```{r, echo=FALSE}
+Pn <- c(117.56,125.43,152.83)
+sum(w*P0)
+sum(w*Pn)
+```
+
+
+### Backtest
+1. On June 2017, long 5-year notes and 30-year bonds and short 10-year notes. Cost = 0.  
+2. On Oct 2017, close out positions. Gain = $0.0197236    
+
+
 
 
