@@ -1,0 +1,128 @@
+---
+title: "US Treasury Yield Curve Trading Strategy"
+author: "Yang Hu"
+date: "10/3/2017"
+output: pdf_document
+---
+
+
+## US Fed Rates Hike History   
+     
+Date          | Fed Fund Rate
+------------- | -------------
+Jun 22, 2011  | 0-0.25%
+Dec 16, 2015  | 0.25-0.5%
+Dec 14, 2016  | 0.5-0.75%
+Mar 15, 2017  | 0.75-1%
+Jun 14, 2017  | 1-1.25%
+     
+     
+## US Treasury Yield Curve Changes   
+    
+```{r, echo=FALSE, message=FALSE}
+
+US3M <- read.csv('US3M.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US6M <- read.csv('US6M.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US1Y <- read.csv('US1Y.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US3Y <- read.csv('US3Y.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US5Y <- read.csv('US5Y.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US10Y <- read.csv('US10Y.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+US30Y <- read.csv('US30Y.csv', header = TRUE, sep = ",", stringsAsFactors = FALSE)[1:12,]
+
+curve <- cbind(US3M[,1:2],US6M[,2],US1Y[,2],US3Y[,2],US5Y[,2],US10Y[,2],US30Y[,2])
+curve <- curve[nrow(curve):1,]
+colnames(curve) <- c('Date','3M','6M','1Y','3Y','5Y','10Y','30Y')
+curve[,-1] <- apply(curve[,-1],MARGIN = 2, FUN=as.numeric)
+curve <- curve[c(1,5,8,11),]
+library('ggplot2')
+plot.curve <- as.data.frame(t(curve[,-1]))
+plot.curve$Time <- c(0.25,0.5,1,3,5,10,30)
+colnames(plot.curve) <- c('Oct17','Jun17','Mar17','Dec16','Time')
+
+ggplot(plot.curve, mapping = aes(x = Time) ) +
+  geom_line(aes(y = Dec16, color = 'Dec16')) +
+  geom_line(aes(y = Mar17, color = 'Mar17')) +
+  geom_line(aes(y = Jun17, color = 'Jun17')) +
+  geom_line(aes(y = Oct17, color = 'Oct17')) +
+  labs(x= 'Term structure', y = 'Curve')
+```
+    
+    
+## Break down the curve change   
+    
+Before forecasting the curve change on Dec 2017, it is necessary to take a closer look at previous curve changes after rate hikes.   
+     
+We can break down the curve change into three categories: **Parallel shift**, **Slope shift** and **Curvature shift**.  All these shifts are orthogonal, which means they do not have cross effects.  
+
+$\Delta \vec{C} \approx \Delta x_1\vec{P_1} +\Delta x_2\vec{P_2} +\Delta x_3\vec{P_3}$   
+$\Delta \vec{C}$ stands for curve change denoted by a vector.    
+    
+We can easily use a set of orthogonal basis -- polynomials.  
+     
+### 3 orthogonal basis
+```{r, echo=FALSE, message=FALSE}
+library('moments')
+T <- 1:7 # key rates
+m2 <- moment(T-mean(T), 2)
+m4 <- moment(T-mean(T), 4)
+P1 <-  rep(1, length=7)
+P2 <- (T -mean(T))         / sqrt(m2)
+P3 <- -((T-mean(T))^2 - m2) / sqrt(m4 - m2^2 )
+Basis <- as.data.frame(cbind(T, P1,P2,P3))
+ggplot(Basis, mapping = aes(x = T) ) +
+  geom_line(aes(y = P1, color = 'Parallel')) +
+  geom_line(aes(y = P2, color = 'Slope')) +
+  geom_line(aes(y = P3, color = 'Curvature')) +
+  labs(x= 'Term structure', y = 'Value')
+
+## basis
+```
+     
+With the tool of orthogonal basis, we can nail down what effect the rate hike had on the curve structure and forecast next curve change.     
+      
+We can get the changes by following formula:   
+$\Delta x_1=\frac{\Delta \vec{C} \cdot  \vec{P_1}}{\|\vec{P_1}\|}$
+
+```{r, echo=FALSE, message=FALSE}
+dc <- curve[1:3,]
+dc <- apply(curve[,-1],2,function(col){diff(col,1)})
+dx1 <- apply(dc, 1, function(row) mean(row*P1))  
+dx2 <- apply(dc, 1, function(row) mean(row*P2))  
+dx3 <- apply(dc, 1, function(row) mean(row*P3))
+temp <- c('Mar 17','Jun 17','Oct 17')
+ret <- cbind(temp,as.data.frame(cbind(dx1,dx2,dx3)))
+print(ret)
+```
+      
+Take the curve change on Mar 17 as an example:  
+
+
+Here are what we observed:   
+1.  Rate hikes caused an upward parallel shift. However, marginal effects on parallel shifts are decreasing.  
+2.  Rate hikes made the curve less tilted.  
+3.  Rate hikes caused an increasing concave change. Curvature change effect is quite stable.   
+
+Furthermore, we observe that these three basis explained 90% of curve changes.   
+
+## Forecast curve change on Dec 2017   
+It is predicted that there will be another rate hike in Dec 2017. Assume it has similar effect on the curve, that is, assume same factor loading on **Parallel shift**, **Slope shift** and **Curvature shift**.  Hence, we forecast that the curve will have a slight upward parallel shift, and become less tiled and become more concave.    
+     
+     
+To illustrate it with numbers, we have:  
+$\Delta x_1=$    
+    
+$\Delta x_2=$    
+    
+$\Delta x_3=0.13$
+     
+     
+     
+## Trading strategy    
+As we forecasted, the rate curve will move upward with a less tilted slope and a more concave curve.   
+
+
+
+
+     
+
+
